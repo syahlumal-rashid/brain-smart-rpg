@@ -18,23 +18,26 @@ window.App = (function () {
     nextExp: 200,
     coins: 500,
     diamonds: 50,
-    rankRP: 120, // Points toward ranks
+    rankRP: 120,
     rankTier: "Bronze I",
     equipped: {
-      uniform: "uniform_sd",
+      skin: "skin_default",
+      uniform: "skin_default",
       hair: "hair_short_black",
       hat: "none",
       bag: "bag_backpack_blue",
-      pet: "none",
-      title: "title_rookie"
+      pet: "pet_none",
+      title: "title_newbie",
+      frame: "frame_basic"
     },
     inventory: [
-      "uniform_sd",
-      "hair_short_black",
-      "bag_backpack_blue",
-      "title_rookie"
+      "skin_default",
+      "frame_basic",
+      "emote_wave",
+      "title_newbie",
+      "pet_none"
     ],
-    badges: ["badge_first_login"],
+    badges: ["first_victory"],
     stats: {
       matches: 0,
       wins: 0,
@@ -44,16 +47,20 @@ window.App = (function () {
       correctAnswers: 0,
       wrongAnswers: 0,
       bossDefeated: 0,
-      tournamentsWon: 0
+      tournamentsWon: 0,
+      perfectCount: 0,
+      classroomDone: 0,
+      locationsVisited: 1
     },
     questsProgress: {
-      daily_login: 1,
-      daily_play_3: 0,
-      daily_perfect_round: 0,
-      daily_boss_challenge: 0,
-      story_reach_level_5: 1,
-      story_win_ranked_5: 0,
-      story_join_classroom: 0
+      dq_win2: 0,
+      dq_solve10: 0,
+      dq_minigame1: 0,
+      dq_academy1: 0,
+      wq_win10: 0,
+      wq_solve50: 0,
+      wq_badge3: 1,
+      wq_boss5: 0
     },
     claimedQuests: [],
     settings: {
@@ -82,8 +89,8 @@ window.App = (function () {
 
     // Initialize 3D Engine & Classroom
     if (window.World3D) {
-      window.World3D.init("threejs-canvas");
-      window.World3D.updateCharacterAppearance(profile.equipped);
+      window.World3D.init("canvas-wrapper");
+      window.World3D.updateCharacterAppearance(profile);
     }
 
     if (window.ClassroomSystem) {
@@ -100,7 +107,6 @@ window.App = (function () {
     if (saved) {
       try {
         profile = JSON.parse(saved);
-        // Ensure missing fields from schema updates are filled
         profile = Object.assign({}, defaultProfile, profile);
         if (!profile.equipped) profile.equipped = Object.assign({}, defaultProfile.equipped);
         if (!profile.inventory) profile.inventory = [...defaultProfile.inventory];
@@ -128,7 +134,7 @@ window.App = (function () {
   }
 
   // ==========================================================================
-  // 2. WEB AUDIO SYNTHESIZER (No external sound files required)
+  // 2. WEB AUDIO SYNTHESIZER
   // ==========================================================================
   function initAudio() {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -139,17 +145,17 @@ window.App = (function () {
 
   function ensureAudioUnlocked() {
     if (audioCtx && audioCtx.state === "suspended") {
-      audioCtx.resume();
+      audioCtx.resume().catch(() => {});
     }
-    if (profile.settings.bgm && !bgmPlaying) {
+    if (profile && profile.settings && profile.settings.bgm && !bgmPlaying) {
       startBGM();
     }
   }
 
   function playSFX(type) {
-    if (!profile.settings.sfx || !audioCtx) return;
+    if (!profile || !profile.settings || !profile.settings.sfx || !audioCtx) return;
     try {
-      if (audioCtx.state === "suspended") audioCtx.resume();
+      if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
       const now = audioCtx.currentTime;
 
       if (type === "click") {
@@ -165,7 +171,6 @@ window.App = (function () {
         osc.start(now);
         osc.stop(now + 0.07);
       } else if (type === "correct") {
-        // Cheerful arpeggio: C5 - E5 - G5 - C6
         const notes = [523.25, 659.25, 783.99, 1046.5];
         notes.forEach((freq, idx) => {
           const osc = audioCtx.createOscillator();
@@ -181,7 +186,6 @@ window.App = (function () {
           osc.stop(noteTime + 0.15);
         });
       } else if (type === "wrong") {
-        // Low buzzy chord
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = "sawtooth";
@@ -194,12 +198,11 @@ window.App = (function () {
         osc.start(now);
         osc.stop(now + 0.3);
       } else if (type === "coin") {
-        // High ping
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = "sine";
-        osc.frequency.setValueAtTime(987.77, now); // B5
-        osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+        osc.frequency.setValueAtTime(987.77, now);
+        osc.frequency.setValueAtTime(1318.51, now + 0.08);
         gain.gain.setValueAtTime(0.28 * profile.settings.volume, now);
         gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
         osc.connect(gain);
@@ -207,7 +210,6 @@ window.App = (function () {
         osc.start(now);
         osc.stop(now + 0.32);
       } else if (type === "victory") {
-        // Fanfare
         const fanNotes = [523.25, 659.25, 783.99, 1046.5, 1318.51];
         fanNotes.forEach((f, i) => {
           const osc = audioCtx.createOscillator();
@@ -223,7 +225,6 @@ window.App = (function () {
           osc.stop(t + (i === 4 ? 0.65 : 0.2));
         });
       } else if (type === "level_up") {
-        // Dramatic ascending glide
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = "square";
@@ -248,12 +249,11 @@ window.App = (function () {
       bgmGain = audioCtx.createGain();
       bgmOsc.type = "sine";
 
-      // Soft procedural chill melodic loop (A3 = 220, C4 = 261, E4 = 329, G4 = 392)
       const notes = [261.63, 329.63, 392.0, 329.63, 220.0, 261.63, 329.63, 261.63];
       let step = 0;
 
       const scheduleLoop = () => {
-        if (!bgmPlaying) return;
+        if (!bgmPlaying || !bgmOsc) return;
         const now = audioCtx.currentTime;
         bgmOsc.frequency.setValueAtTime(notes[step % notes.length], now);
         step++;
@@ -309,7 +309,6 @@ window.App = (function () {
       currentScreen = screenId;
     }
 
-    // Toggle 3D scene mode & Canvas visibility
     const canvasWrap = document.getElementById("canvas-wrapper");
     const mobileControls = document.getElementById("mobile-adventure-controls");
 
@@ -323,7 +322,6 @@ window.App = (function () {
       if (window.World3D) window.World3D.setMode("adventure");
       renderAdventureHUD();
     } else {
-      // 2D Full UI Screens (Shop, Classroom, Inventory, Quests, Leaderboard, etc.)
       if (canvasWrap) canvasWrap.style.display = "none";
       if (mobileControls) mobileControls.style.display = "none";
     }
@@ -371,10 +369,10 @@ window.App = (function () {
     if (expBarEl) expBarEl.style.width = `${expPercent}%`;
     if (expTextEl) expTextEl.textContent = `${profile.exp} / ${profile.nextExp} EXP`;
 
-    if (coinsEl) coinsEl.textContent = profile.coins.toLocaleString();
-    if (diamondsEl) diamondsEl.textContent = profile.diamonds.toLocaleString();
+    if (coinsEl) coinsEl.textContent = (profile.coins || 0).toLocaleString();
+    if (diamondsEl) diamondsEl.textContent = (profile.diamonds || 0).toLocaleString();
 
-    const currentRank = calculateRankTier(profile.rankRP);
+    const currentRank = calculateRankTier(profile.rankRP || 0);
     profile.rankTier = currentRank.name;
     if (rankBadgeEl) rankBadgeEl.textContent = currentRank.icon;
     if (rankTierEl) {
@@ -388,8 +386,8 @@ window.App = (function () {
   }
 
   function calculateRankTier(rp) {
-    const ranks = window.GAME_DATA.ranks;
-    let current = ranks[0];
+    const ranks = window.GAME_DATA.ranks || [];
+    let current = ranks[0] || { name: "Bronze I", icon: "🥉", color: "#f59e0b" };
     for (let r of ranks) {
       if (rp >= r.minRP) {
         current = r;
@@ -435,10 +433,12 @@ window.App = (function () {
   // ==========================================================================
   function recordMatchResult(summary) {
     profile.stats.matches += 1;
-    let expEarned = 100;
-    let coinsEarned = 100;
+    const p1Score = summary.p1Score || summary.score || 0;
+    const p1Correct = summary.p1Correct || summary.correctCount || 0;
+
+    let expEarned = summary.expEarned || 100;
+    let coinsEarned = summary.goldEarned || 100;
     let diamondEarned = 0;
-    let rpEarned = 0;
 
     if (summary.won) {
       profile.stats.wins += 1;
@@ -447,49 +447,48 @@ window.App = (function () {
         profile.stats.bestStreak = profile.stats.streak;
       }
 
-      expEarned = 250 + summary.score * 0.2;
-      coinsEarned = 150 + summary.score * 0.3;
-
       if (summary.battleMode === "ranked") {
-        rpEarned = 25;
         diamondEarned = 5;
-        profile.rankRP += rpEarned;
+        profile.rankRP = (profile.rankRP || 0) + (summary.rpDelta || 35);
       } else if (summary.battleMode === "boss") {
         profile.stats.bossDefeated += 1;
-        expEarned = 400;
-        coinsEarned = 350;
         diamondEarned = 15;
       } else if (summary.battleMode === "tournament") {
         profile.stats.tournamentsWon += 1;
-        expEarned = 600;
-        coinsEarned = 500;
         diamondEarned = 25;
+      } else if (summary.battleMode === "classroom") {
+        profile.stats.classroomDone += 1;
       }
     } else {
       profile.stats.losses += 1;
       profile.stats.streak = 0;
-      expEarned = 80;
-      coinsEarned = 50;
 
       if (summary.battleMode === "ranked") {
-        rpEarned = -15;
-        profile.rankRP = Math.max(0, profile.rankRP - 15);
+        profile.rankRP = Math.max(0, (profile.rankRP || 0) - 15);
       }
     }
 
-    profile.stats.correctAnswers += summary.p1Correct || 0;
-    profile.stats.wrongAnswers += 5 - (summary.p1Correct || 0);
+    if (summary.perfect || p1Correct === 5) {
+      profile.stats.perfectCount = (profile.stats.perfectCount || 0) + 1;
+    }
+
+    profile.stats.correctAnswers += p1Correct;
+    profile.stats.wrongAnswers += Math.max(0, 5 - p1Correct);
 
     // Update quest progress
-    profile.questsProgress.daily_play_3 = (profile.questsProgress.daily_play_3 || 0) + 1;
-    if (summary.p1Correct === 5) {
-      profile.questsProgress.daily_perfect_round = 1;
+    profile.questsProgress.dq_minigame1 = (profile.questsProgress.dq_minigame1 || 0) + 1;
+    profile.questsProgress.dq_solve10 = (profile.questsProgress.dq_solve10 || 0) + p1Correct;
+    profile.questsProgress.wq_solve50 = (profile.questsProgress.wq_solve50 || 0) + p1Correct;
+
+    if (summary.won) {
+      profile.questsProgress.dq_win2 = (profile.questsProgress.dq_win2 || 0) + 1;
+      profile.questsProgress.wq_win10 = (profile.questsProgress.wq_win10 || 0) + 1;
     }
     if (summary.battleMode === "boss" && summary.won) {
-      profile.questsProgress.daily_boss_challenge = 1;
+      profile.questsProgress.wq_boss5 = (profile.questsProgress.wq_boss5 || 0) + 1;
     }
-    if (summary.battleMode === "ranked" && summary.won) {
-      profile.questsProgress.story_win_ranked_5 = (profile.questsProgress.story_win_ranked_5 || 0) + 1;
+    if (summary.battleMode === "classroom") {
+      profile.questsProgress.dq_academy1 = (profile.questsProgress.dq_academy1 || 0) + 1;
     }
 
     profile.coins += Math.round(coinsEarned);
@@ -501,23 +500,25 @@ window.App = (function () {
   }
 
   function checkBadges() {
-    const badges = window.GAME_DATA.badges;
+    const badges = window.GAME_DATA.badges || [];
     badges.forEach((b) => {
       if (profile.badges.includes(b.id)) return;
       let unlocked = false;
 
-      if (b.id === "badge_first_win" && profile.stats.wins >= 1) unlocked = true;
-      if (b.id === "badge_math_master" && profile.stats.correctAnswers >= 20) unlocked = true;
-      if (b.id === "badge_streak_5" && profile.stats.bestStreak >= 5) unlocked = true;
-      if (b.id === "badge_boss_slayer" && profile.stats.bossDefeated >= 1) unlocked = true;
-      if (b.id === "badge_scholar" && profile.level >= 5) unlocked = true;
-      if (b.id === "badge_champion" && profile.stats.tournamentsWon >= 1) unlocked = true;
+      if (b.id === "first_victory" && profile.stats.wins >= 1) unlocked = true;
+      if (b.id === "math_genius" && profile.stats.correctAnswers >= 10) unlocked = true;
+      if (b.id === "quiz_champion" && profile.stats.wins >= 10) unlocked = true;
+      if (b.id === "perfect_brain" && (profile.stats.perfectCount || 0) >= 1) unlocked = true;
+      if (b.id === "boss_slayer" && (profile.stats.bossDefeated || 0) >= 1) unlocked = true;
+      if (b.id === "class_star" && (profile.stats.classroomDone || 0) >= 1) unlocked = true;
+      if (b.id === "school_explorer" && (profile.stats.locationsVisited || 0) >= 3) unlocked = true;
 
       if (unlocked) {
         profile.badges.push(b.id);
-        profile.diamonds += b.rewardDiamonds || 10;
+        profile.coins += b.rewardGold || 150;
+        profile.questsProgress.wq_badge3 = (profile.questsProgress.wq_badge3 || 0) + 1;
         playSFX("victory");
-        notify(`Lencana Baru Terbuka: [${b.name}]! +${b.rewardDiamonds || 10} Diamonds 🏅`, "success");
+        notify(`Lencana Baru Terbuka: [${b.name}]! +${b.rewardGold || 150} Koin 🏅`, "success");
       }
     });
     saveProfile();
@@ -550,6 +551,10 @@ window.App = (function () {
 
   function onProximityLocationChange(location) {
     currentInteractingLocation = location;
+    if (location) {
+      profile.stats.locationsVisited = Math.max(profile.stats.locationsVisited || 1, 3);
+      checkBadges();
+    }
     renderAdventureHUD();
   }
 
@@ -600,34 +605,33 @@ window.App = (function () {
   }
 
   function handleLocationAction(loc) {
-    if (loc.id === "office" || loc.name.includes("Guru") || loc.name.includes("Classroom")) {
+    if (loc.id === 5 || loc.name.includes("Guru") || loc.name.includes("Classroom")) {
       showScreen("screen-classroom");
-    } else if (loc.id === "competition" || loc.name.includes("Kompetisi")) {
+    } else if (loc.id === 13 || loc.name.includes("Kompetisi")) {
       window.MiniGameEngine.startMatch({
         battleMode: "tournament",
         miniGameId: "quick_answer",
         timePerRound: 15
       });
-    } else if (loc.id === "sports" || loc.name.includes("Olahraga")) {
+    } else if (loc.id === 12 || loc.name.includes("Olahraga")) {
       window.MiniGameEngine.startMatch({
         battleMode: "ranked",
         miniGameId: "math_race",
         timePerRound: 15
       });
-    } else if (loc.id === "science" || loc.name.includes("Sains")) {
+    } else if (loc.id === 7 || loc.name.includes("Sains")) {
       window.MiniGameEngine.startMatch({
         battleMode: "boss",
         miniGameId: "quick_answer",
         timePerRound: 20
       });
-    } else if (loc.id === "library" || loc.name.includes("Perpustakaan")) {
+    } else if (loc.id === 6 || loc.name.includes("Perpustakaan")) {
       window.MiniGameEngine.startMatch({
         battleMode: "solo",
         miniGameId: "memory_cards",
         timePerRound: 18
       });
     } else {
-      // Default to Battle Select with pre-filtered settings
       showScreen("screen-battle-select");
     }
   }
@@ -661,7 +665,7 @@ window.App = (function () {
         title: "Boss Challenge (Titan Pengetahuan)",
         badge: "Co-op / Raid",
         icon: "👹",
-        desc: "Kalahkan Boss 100 HP dengan jawaban cepat dan tepat untuk hadiah koin dan permata melimpah!",
+        desc: "Kalahkan Boss 100 HP dengan jawaban cepat dan tepat untuk hadiah koin melimpah!",
         color: "#ef4444"
       },
       {
@@ -700,7 +704,6 @@ window.App = (function () {
       )
       .join("");
 
-    // Populate Level & Subject selectors
     const levelSel = document.getElementById("select-battle-level");
     if (levelSel && levelSel.options.length <= 1) {
       levelSel.innerHTML = `
@@ -734,24 +737,34 @@ window.App = (function () {
   // ==========================================================================
   let activeShopCategory = "all";
 
+  function matchCategory(itemCat, selectedCat) {
+    if (selectedCat === "all") return true;
+    const cat = (itemCat || "").toLowerCase();
+    const sel = selectedCat.toLowerCase();
+    if (sel === "skin" || sel === "uniform") return cat.includes("skin") || cat.includes("uniform");
+    if (sel === "pet") return cat.includes("pet");
+    if (sel === "frame") return cat.includes("frame");
+    if (sel === "emote") return cat.includes("emote");
+    if (sel === "title") return cat.includes("title");
+    if (sel === "background" || sel === "bg") return cat.includes("background");
+    return cat.includes(sel);
+  }
+
   function renderShopScreen() {
     const coinsEl = document.getElementById("shop-coins-display");
     const diamondsEl = document.getElementById("shop-diamonds-display");
-    if (coinsEl) coinsEl.textContent = profile.coins.toLocaleString();
-    if (diamondsEl) diamondsEl.textContent = profile.diamonds.toLocaleString();
+    if (coinsEl) coinsEl.textContent = (profile.coins || 0).toLocaleString();
+    if (diamondsEl) diamondsEl.textContent = (profile.diamonds || 0).toLocaleString();
 
     const itemsGrid = document.getElementById("shop-items-grid");
     if (!itemsGrid) return;
 
-    const items = window.GAME_DATA.shopItems.filter((it) => {
-      if (activeShopCategory === "all") return true;
-      return it.category === activeShopCategory;
-    });
+    const items = (window.GAME_DATA.shopItems || []).filter((it) => matchCategory(it.category, activeShopCategory));
 
     itemsGrid.innerHTML = items
       .map((item) => {
         const owned = profile.inventory.includes(item.id);
-        const isEquipped = Object.values(profile.equipped).includes(item.id);
+        const isEquipped = Object.values(profile.equipped || {}).includes(item.id);
 
         let actionBtn = "";
         if (owned) {
@@ -776,7 +789,7 @@ window.App = (function () {
           <div class="shop-item-info">
             <div class="shop-item-name">${item.name}</div>
             <div class="shop-item-cat">${item.category.toUpperCase()}</div>
-            <div class="shop-item-desc">${item.description || ""}</div>
+            <div class="shop-item-desc">${item.desc || ""}</div>
           </div>
           <div class="shop-item-footer">
             ${actionBtn}
@@ -830,13 +843,20 @@ window.App = (function () {
   function equipItem(itemId, category) {
     if (!profile.inventory.includes(itemId)) return;
 
-    const catKey = category.toLowerCase();
-    if (profile.equipped.hasOwnProperty(catKey)) {
-      profile.equipped[catKey] = itemId;
+    const cat = (category || "").toLowerCase();
+    if (cat.includes("skin") || cat.includes("uniform")) {
+      profile.equipped.skin = itemId;
+      profile.equipped.uniform = itemId;
+    } else if (cat.includes("pet")) {
+      profile.equipped.pet = itemId;
+    } else if (cat.includes("frame")) {
+      profile.equipped.frame = itemId;
+    } else if (cat.includes("title")) {
+      profile.equipped.title = itemId;
     }
 
     if (window.World3D) {
-      window.World3D.updateCharacterAppearance(profile.equipped);
+      window.World3D.updateCharacterAppearance(profile);
     }
 
     playSFX("click");
@@ -850,11 +870,11 @@ window.App = (function () {
     const grid = document.getElementById("inventory-items-grid");
     if (!grid) return;
 
-    const ownedItems = window.GAME_DATA.shopItems.filter((i) => profile.inventory.includes(i.id));
+    const ownedItems = (window.GAME_DATA.shopItems || []).filter((i) => profile.inventory.includes(i.id));
 
     grid.innerHTML = ownedItems
       .map((item) => {
-        const isEquipped = Object.values(profile.equipped).includes(item.id);
+        const isEquipped = Object.values(profile.equipped || {}).includes(item.id);
         return `
         <div class="inv-card ${isEquipped ? "equipped-card" : ""}">
           <div class="inv-icon">${item.icon || "🎁"}</div>
@@ -879,8 +899,8 @@ window.App = (function () {
     const storyEl = document.getElementById("story-quests-list");
     if (!dailyEl || !storyEl) return;
 
-    const daily = window.GAME_DATA.quests.daily;
-    const story = window.GAME_DATA.quests.story;
+    const daily = window.GAME_DATA.quests.daily || [];
+    const story = window.GAME_DATA.quests.weekly || window.GAME_DATA.quests.story || [];
 
     dailyEl.innerHTML = daily
       .map((q) => {
@@ -902,8 +922,8 @@ window.App = (function () {
           <div class="quest-icon">🎯</div>
           <div class="quest-info">
             <strong>${q.title}</strong>
-            <p>${q.desc}</p>
-            <div class="quest-rewards">Hadiah: +${q.rewardCoins} Koin ${q.rewardDiamonds ? `• +${q.rewardDiamonds} Diamond` : ""}</div>
+            <p>${q.desc || `Target: ${q.target}`}</p>
+            <div class="quest-rewards">Hadiah: +${q.rewardGold || 80} Koin • +${q.rewardExp || 50} EXP</div>
           </div>
           <div class="quest-action">${actionBtn}</div>
         </div>
@@ -921,7 +941,7 @@ window.App = (function () {
         if (isClaimed) {
           actionBtn = `<button class="btn-claimed" disabled>Diklaim ✓</button>`;
         } else if (isCompleted) {
-          actionBtn = `<button class="btn-claim-reward" onclick="App.claimQuestReward('${q.id}', 'story')">Klaim 🎁</button>`;
+          actionBtn = `<button class="btn-claim-reward" onclick="App.claimQuestReward('${q.id}', 'weekly')">Klaim 🎁</button>`;
         } else {
           actionBtn = `<span class="quest-progress-tag">${current}/${q.target}</span>`;
         }
@@ -931,8 +951,8 @@ window.App = (function () {
           <div class="quest-icon">📜</div>
           <div class="quest-info">
             <strong>${q.title}</strong>
-            <p>${q.desc}</p>
-            <div class="quest-rewards">Hadiah: +${q.rewardCoins} Koin • +${q.rewardDiamonds} Diamond</div>
+            <p>${q.desc || `Target: ${q.target}`}</p>
+            <div class="quest-rewards">Hadiah: +${q.rewardGold || 250} Koin • +${q.rewardExp || 200} EXP</div>
           </div>
           <div class="quest-action">${actionBtn}</div>
         </div>
@@ -944,13 +964,13 @@ window.App = (function () {
   function claimQuestReward(questId, type) {
     if (profile.claimedQuests.includes(questId)) return;
 
-    const list = type === "daily" ? window.GAME_DATA.quests.daily : window.GAME_DATA.quests.story;
+    const list = type === "daily" ? (window.GAME_DATA.quests.daily || []) : (window.GAME_DATA.quests.weekly || window.GAME_DATA.quests.story || []);
     const quest = list.find((q) => q.id === questId);
     if (!quest) return;
 
     profile.claimedQuests.push(questId);
-    profile.coins += quest.rewardCoins || 0;
-    profile.diamonds += quest.rewardDiamonds || 0;
+    profile.coins += quest.rewardGold || 100;
+    addEXP(quest.rewardExp || 80);
 
     playSFX("coin");
     notify(`Hadiah Misi '${quest.title}' berhasil diklaim! 🎁`, "success");
@@ -966,18 +986,16 @@ window.App = (function () {
     const listEl = document.getElementById("leaderboard-list");
     if (!listEl) return;
 
-    // Simulated online global leaderboard featuring the player
     const topPlayers = [
       { rank: 1, name: "Bintang Juara (SMAN 1)", tier: "Mythic", score: 2890, avatar: "🥇" },
       { rank: 2, name: "Rizky Math Wizard", tier: "Grandmaster", score: 2450, avatar: "🥈" },
       { rank: 3, name: "Nabila Cerdas", tier: "Master", score: 2130, avatar: "🥉" },
       { rank: 4, name: "Ahmad Sains Explorer", tier: "Diamond", score: 1840, avatar: "⭐" },
-      { rank: 5, name: profile.name + " (Kamu)", tier: profile.rankTier, score: profile.rankRP, avatar: "👤", isPlayer: true },
+      { rank: 5, name: profile.name + " (Kamu)", tier: profile.rankTier, score: profile.rankRP || 120, avatar: "👤", isPlayer: true },
       { rank: 6, name: "Farhan Quiz Champion", tier: "Gold I", score: 720, avatar: "🎖️" },
       { rank: 7, name: "Siti Pintar", tier: "Silver II", score: 450, avatar: "🎖️" }
     ];
 
-    // Sort by score
     topPlayers.sort((a, b) => b.score - a.score);
     topPlayers.forEach((p, idx) => (p.rank = idx + 1));
 
@@ -1012,7 +1030,7 @@ window.App = (function () {
 
     if (nameEl) nameEl.textContent = profile.name;
     if (levelEl) levelEl.textContent = `Level ${profile.level} (${profile.grade})`;
-    if (rankEl) rankEl.textContent = `${profile.rankTier} (${profile.rankRP} RP)`;
+    if (rankEl) rankEl.textContent = `${profile.rankTier} (${profile.rankRP || 0} RP)`;
     if (matchesEl) matchesEl.textContent = profile.stats.matches;
 
     const winrate =
@@ -1023,7 +1041,7 @@ window.App = (function () {
     if (streakEl) streakEl.textContent = `${profile.stats.streak} (Terbaik: ${profile.stats.bestStreak})`;
 
     if (badgesGrid) {
-      badgesGrid.innerHTML = window.GAME_DATA.badges
+      badgesGrid.innerHTML = (window.GAME_DATA.badges || [])
         .map((b) => {
           const unlocked = profile.badges.includes(b.id);
           return `
@@ -1058,7 +1076,7 @@ window.App = (function () {
   }
 
   // ==========================================================================
-  // 12. VIRTUAL JOYSTICK & TOUCH CONTROLS (Android / Mobile)
+  // 12. VIRTUAL JOYSTICK & TOUCH CONTROLS
   // ==========================================================================
   function initVirtualJoystick() {
     const stickZone = document.getElementById("virtual-joystick-zone");
@@ -1123,7 +1141,6 @@ window.App = (function () {
 
       knob.style.transform = `translate(${dx}px, ${dy}px)`;
 
-      // Normalize joystick output (-1 to 1)
       const normX = dx / maxRadius;
       const normZ = dy / maxRadius;
 
@@ -1177,7 +1194,6 @@ window.App = (function () {
   }
 
   function initDOMListeners() {
-    // Keyboard shortcut for location interaction in 3D world
     window.addEventListener("keydown", (e) => {
       if (e.key === "e" || e.key === "E") {
         if (currentScreen === "screen-adventure" && currentInteractingLocation) {
@@ -1186,7 +1202,6 @@ window.App = (function () {
       }
     });
 
-    // Close modal on background click
     document.querySelectorAll(".modal-overlay").forEach((m) => {
       m.addEventListener("click", (e) => {
         if (e.target === m) m.classList.remove("active");
@@ -1219,7 +1234,6 @@ window.App = (function () {
   };
 })();
 
-// Bootstrap on DOM Loaded
 document.addEventListener("DOMContentLoaded", () => {
   window.App.init();
 });

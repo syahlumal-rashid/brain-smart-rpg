@@ -46,7 +46,7 @@ window.MiniGameEngine = (function () {
     let oppName = "Bot Cerdas";
     if (state.battleMode === "local2p") oppName = "Pemain 2 (Lokal)";
     else if (state.battleMode === "boss") oppName = "Boss: Shadow Ignoramus";
-    else if (state.battleMode === "ranked") oppName = pickRandomOpponentName(profile.rankPoints);
+    else if (state.battleMode === "ranked") oppName = pickRandomOpponentName(profile.rankRP);
     else if (state.battleMode === "friendly") oppName = "Teman Room #" + (config.roomCode || "8821");
     else if (state.battleMode === "tournament") {
       const stages = ["Perempat Final: Kevin", "Semifinal: Aurelia", "Grand Final: Grandmaster Raka"];
@@ -71,21 +71,24 @@ window.MiniGameEngine = (function () {
   }
 
   function buildQuestionSet(miniGameId, levelFilter, subjectFilter, count) {
-    let pool = [...window.GAME_DATA.questions];
+    let pool = [...(window.GAME_DATA.questions || [])];
 
     // Mini-game specific category filter
     if (miniGameId === "math_race") {
-      pool = pool.filter((q) => q.category === "Math");
+      const mathPool = pool.filter((q) => q.category === "Math");
+      if (mathPool.length >= 3) pool = mathPool;
     } else if (miniGameId === "word_battle") {
-      pool = pool.filter((q) => q.wordHint && q.wordTarget);
+      const wordPool = pool.filter((q) => q.wordHint && q.wordTarget);
+      if (wordPool.length >= 3) pool = wordPool;
     } else if (miniGameId === "history_quiz") {
-      pool = pool.filter((q) => q.category === "History");
+      const histPool = pool.filter((q) => q.category === "History");
+      if (histPool.length >= 3) pool = histPool;
     } else if (miniGameId === "tech_challenge") {
-      pool = pool.filter((q) => q.category === "Tech");
+      const techPool = pool.filter((q) => q.category === "Tech");
+      if (techPool.length >= 3) pool = techPool;
     } else if (miniGameId === "science_challenge") {
-      pool = pool.filter((q) => q.category === "Science");
-    } else if (miniGameId === "geo_challenge") {
-      pool = pool.filter((q) => q.category === "Geography");
+      const sciPool = pool.filter((q) => q.category === "Science");
+      if (sciPool.length >= 3) pool = sciPool;
     }
 
     if (levelFilter && levelFilter !== "all" && levelFilter !== "teacher") {
@@ -94,11 +97,11 @@ window.MiniGameEngine = (function () {
     }
 
     if (subjectFilter && subjectFilter !== "all") {
-      const bySub = pool.filter((q) => q.subject.toLowerCase().includes(subjectFilter.toLowerCase()));
+      const bySub = pool.filter((q) => q.subject && q.subject.toLowerCase().includes(subjectFilter.toLowerCase()));
       if (bySub.length >= 2) pool = bySub;
     }
 
-    // Shuffle and pick 5
+    // Shuffle and pick
     const shuffled = pool.sort(() => Math.random() - 0.5);
     const result = [];
     for (let i = 0; i < count; i++) {
@@ -135,7 +138,7 @@ window.MiniGameEngine = (function () {
 
     // Schedule AI answer if against AI
     if (state.battleMode !== "local2p" && state.battleMode !== "solo" && state.battleMode !== "classroom") {
-      const aiDelayMs = (3.5 + Math.random() * 6.5) * 1000;
+      const aiDelayMs = (3.5 + Math.random() * 5.5) * 1000;
       state.aiTimeoutId = setTimeout(() => {
         if (!state.active || state.p2.answered) return;
         const aiCorrect = Math.random() < 0.72;
@@ -145,50 +148,57 @@ window.MiniGameEngine = (function () {
   }
 
   function getCorrectAnswerValue(qObj) {
+    if (!qObj) return 0;
     if (state.miniGameId === "true_false") return qObj.tfAnswer;
     return qObj.a;
   }
 
   function renderMatchHeader() {
     const mg = window.GAME_DATA.miniGames.find((m) => m.id === state.miniGameId) || window.GAME_DATA.miniGames[0];
-    document.getElementById("match-mode-title").textContent =
-      `${mg.icon} ${mg.name} — ${state.battleMode.toUpperCase()}`;
-    document.getElementById("match-p1-name").textContent = state.p1.name;
-    document.getElementById("match-p2-name").textContent = state.p2.name;
+    const titleEl = document.getElementById("match-mode-title");
+    const p1NameEl = document.getElementById("match-p1-name");
+    const p2NameEl = document.getElementById("match-p2-name");
+    if (titleEl) titleEl.textContent = `${mg.icon || "⚔️"} ${mg.name || "Quiz Battle"} — ${state.battleMode.toUpperCase()}`;
+    if (p1NameEl) p1NameEl.textContent = state.p1.name;
+    if (p2NameEl) p2NameEl.textContent = state.p2.name;
     updateScoreHUD();
   }
 
   function updateScoreHUD() {
-    document.getElementById("match-p1-score").textContent = state.p1.score;
-    document.getElementById("match-p2-score").textContent = state.p2.score;
-    document.getElementById("match-round-badge").textContent =
-      `Ronde ${state.currentRound} / ${state.totalRounds}`;
+    const p1ScoreEl = document.getElementById("match-p1-score");
+    const p2ScoreEl = document.getElementById("match-p2-score");
+    const roundEl = document.getElementById("match-round-badge") || document.getElementById("match-round-text");
+    if (p1ScoreEl) p1ScoreEl.textContent = state.p1.score;
+    if (p2ScoreEl) p2ScoreEl.textContent = state.p2.score;
+    if (roundEl) roundEl.textContent = `Ronde ${state.currentRound} / ${state.totalRounds}`;
 
     // Special Visual Track for Math Race or Boss HP Bar
     const specialBar = document.getElementById("match-special-visual");
-    if (state.battleMode === "boss") {
-      specialBar.style.display = "block";
-      specialBar.innerHTML = `
-        <div class="boss-bar-wrap">
-          <div class="boss-label">👹 BOSS: SHADOW IGNORAMUS — HP: ${Math.max(0, state.bossHP)}%</div>
-          <div class="boss-hp-track"><div class="boss-hp-fill" style="width:${Math.max(0, state.bossHP)}%"></div></div>
-        </div>`;
-    } else if (state.miniGameId === "math_race") {
-      const p1Pct = Math.min(92, (state.p1.correctCount / 5) * 85 + 8);
-      const p2Pct = Math.min(92, (state.p2.correctCount / 5) * 85 + 8);
-      specialBar.style.display = "block";
-      specialBar.innerHTML = `
-        <div class="race-track-box">
-          <div class="race-lane"><span class="race-runner" style="left:${p1Pct}%">🏎️ ${state.p1.name}</span></div>
-          <div class="race-lane"><span class="race-runner p2" style="left:${p2Pct}%">🚀 ${state.p2.name}</span></div>
-        </div>`;
-    } else {
-      specialBar.style.display = "none";
+    if (specialBar) {
+      if (state.battleMode === "boss") {
+        specialBar.style.display = "block";
+        specialBar.innerHTML = `
+          <div class="boss-bar-wrap">
+            <div class="boss-label">👹 BOSS: SHADOW IGNORAMUS — HP: ${Math.max(0, state.bossHP)}%</div>
+            <div class="boss-hp-track"><div class="boss-hp-fill" style="width:${Math.max(0, state.bossHP)}%"></div></div>
+          </div>`;
+      } else if (state.miniGameId === "math_race") {
+        const p1Pct = Math.min(92, (state.p1.correctCount / 5) * 85 + 8);
+        const p2Pct = Math.min(92, (state.p2.correctCount / 5) * 85 + 8);
+        specialBar.style.display = "block";
+        specialBar.innerHTML = `
+          <div class="race-track-box">
+            <div class="race-lane"><span class="race-runner" style="left:${p1Pct}%">🏎️ ${state.p1.name}</span></div>
+            <div class="race-lane"><span class="race-runner p2" style="left:${p2Pct}%">🚀 ${state.p2.name}</span></div>
+          </div>`;
+      } else {
+        specialBar.style.display = "none";
+      }
     }
   }
 
   function updateTimerDisplay() {
-    const timerEl = document.getElementById("match-timer-text");
+    const timerEl = document.getElementById("match-timer-text") || document.getElementById("match-timer-box");
     const fillEl = document.getElementById("match-timer-fill");
     if (timerEl) timerEl.textContent = `${state.timeLeft}d`;
     if (fillEl) {
@@ -203,22 +213,23 @@ window.MiniGameEngine = (function () {
     updateTimerDisplay();
 
     const feedbackEl = document.getElementById("match-feedback-banner");
-    feedbackEl.style.display = "none";
+    if (feedbackEl) feedbackEl.style.display = "none";
 
-    const arenaEl = document.getElementById("match-arena-body");
+    const arenaEl = document.getElementById("match-arena-body") || document.getElementById("match-interactive-area");
+    if (!arenaEl || !qObj) return;
 
     // 1. LOCAL 2-PLAYER SPLIT SCREEN MODE
     if (state.battleMode === "local2p") {
       arenaEl.innerHTML = `
         <div class="question-card-main">
-          <span class="q-meta-pill">${qObj.subject} • ${qObj.level.toUpperCase()}</span>
+          <span class="q-meta-pill">${qObj.subject || "Umum"} • ${(qObj.level || "SD").toUpperCase()}</span>
           <h3>${qObj.q}</h3>
         </div>
         <div class="local2p-split-grid">
           <div class="local2p-panel p1-side" id="local-p1-pad">
-            <h4>🟦 ${state.p1.name} (Klik tombol di bawah)</h4>
+            <h4>🟦 ${state.p1.name}</h4>
             <div class="options-grid-compact">
-              ${qObj.options.map((opt, idx) => `
+              ${(qObj.options || []).map((opt, idx) => `
                 <button class="btn-opt p1-opt" onclick="MiniGameEngine.answerLocal2P(1, ${idx})">
                   <strong>${String.fromCharCode(65 + idx)}.</strong> ${opt}
                 </button>
@@ -226,9 +237,9 @@ window.MiniGameEngine = (function () {
             </div>
           </div>
           <div class="local2p-panel p2-side" id="local-p2-pad">
-            <h4>🟧 ${state.p2.name} (Klik tombol di bawah)</h4>
+            <h4>🟧 ${state.p2.name}</h4>
             <div class="options-grid-compact">
-              ${qObj.options.map((opt, idx) => `
+              ${(qObj.options || []).map((opt, idx) => `
                 <button class="btn-opt p2-opt" onclick="MiniGameEngine.answerLocal2P(2, ${idx})">
                   <strong>${String.fromCharCode(65 + idx)}.</strong> ${opt}
                 </button>
@@ -244,8 +255,8 @@ window.MiniGameEngine = (function () {
     if (state.miniGameId === "true_false") {
       arenaEl.innerHTML = `
         <div class="question-card-main">
-          <span class="q-meta-pill">⚖️ TRUE OR FALSE • ${qObj.subject}</span>
-          <h3>"${qObj.tfStatement}"</h3>
+          <span class="q-meta-pill">⚖️ TRUE OR FALSE • ${qObj.subject || "Umum"}</span>
+          <h3>"${qObj.tfStatement || qObj.q}"</h3>
           <p class="q-sub-hint">Tentukan apakah pernyataan di atas BENAR atau SALAH!</p>
         </div>
         <div class="tf-buttons-row">
@@ -260,7 +271,6 @@ window.MiniGameEngine = (function () {
     if (state.miniGameId === "word_battle") {
       const target = qObj.wordTarget || "BELAJAR";
       const masked = target.split("").map((ch, i) => (i === 0 || i === target.length - 1 ? ch : "_")).join(" ");
-      // Generate 4 choices where 1 is the exact wordTarget
       const distractors = ["PROKLAMASI", "ALJABAR", "EKUATOR", "FOTOSINTESIS", "KALKULUS", "BINER"]
         .filter((w) => w !== target)
         .slice(0, 3);
@@ -268,8 +278,8 @@ window.MiniGameEngine = (function () {
 
       arenaEl.innerHTML = `
         <div class="question-card-main">
-          <span class="q-meta-pill">🔤 WORD BATTLE • ${qObj.subject}</span>
-          <h3>Petunjuk: "${qObj.wordHint}"</h3>
+          <span class="q-meta-pill">🔤 WORD BATTLE • ${qObj.subject || "Bahasa"}</span>
+          <h3>Petunjuk: "${qObj.wordHint || qObj.q}"</h3>
           <div class="word-mask-box">${masked}</div>
         </div>
         <div class="options-grid-2x2">
@@ -283,8 +293,8 @@ window.MiniGameEngine = (function () {
       return;
     }
 
-    // 4. MEMORY CHALLENGE MINI-GAME (Flash key fact first!)
-    if (state.miniGameId === "memory_challenge") {
+    // 4. MEMORY CHALLENGE MINI-GAME
+    if (state.miniGameId === "memory_cards" || state.miniGameId === "memory_challenge") {
       arenaEl.innerHTML = `
         <div class="question-card-main memory-flash-card" id="mem-flash-box">
           <span class="q-meta-pill">🧠 MEMORY CHALLENGE — INGAT FAKTA INI (2 DETIK)!</span>
@@ -293,11 +303,11 @@ window.MiniGameEngine = (function () {
         </div>
         <div id="mem-question-area" style="display:none">
           <div class="question-card-main">
-            <span class="q-meta-pill">🧠 MEMORY CHALLENGE • ${qObj.subject}</span>
+            <span class="q-meta-pill">🧠 MEMORY CHALLENGE • ${qObj.subject || "Umum"}</span>
             <h3>${qObj.q}</h3>
           </div>
           <div class="options-grid-2x2">
-            ${qObj.options.map((opt, idx) => `
+            ${(qObj.options || []).map((opt, idx) => `
               <button class="btn-opt" onclick="MiniGameEngine.submitAnswer(${idx})">
                 <span class="opt-letter">${String.fromCharCode(65 + idx)}</span> ${opt}
               </button>
@@ -316,14 +326,14 @@ window.MiniGameEngine = (function () {
       return;
     }
 
-    // 5. DEFAULT: QUICK ANSWER / MATH RACE / SUBJECT CHALLENGES
+    // 5. DEFAULT: QUICK ANSWER / MATH RACE / GENERAL QUIZ
     arenaEl.innerHTML = `
       <div class="question-card-main">
-        <span class="q-meta-pill">${qObj.subject} • Jenjang ${qObj.level.toUpperCase()}</span>
+        <span class="q-meta-pill">${qObj.subject || "Umum"} • Jenjang ${(qObj.level || "SD").toUpperCase()}</span>
         <h3>${qObj.q}</h3>
       </div>
       <div class="options-grid-2x2">
-        ${qObj.options.map((opt, idx) => `
+        ${(qObj.options || []).map((opt, idx) => `
           <button class="btn-opt" onclick="MiniGameEngine.submitAnswer(${idx})">
             <span class="opt-letter">${String.fromCharCode(65 + idx)}</span> ${opt}
           </button>
@@ -348,8 +358,6 @@ window.MiniGameEngine = (function () {
     processPlayerAnswer(playerNum, choiceIdx, qObj);
   }
 
-  // Core GDD Section 9.2 Scoring Logic:
-  // Correct = +100, Fastest Correct Bonus = +50, Wrong = 0
   function processPlayerAnswer(playerNum, choiceVal, qObj) {
     const p = playerNum === 1 ? state.p1 : state.p2;
     if (p.answered) return;
@@ -417,24 +425,25 @@ window.MiniGameEngine = (function () {
 
   function revealRoundOutcome(qObj, timedOut, p1Base = 0, p1Fast = 0) {
     const feedbackEl = document.getElementById("match-feedback-banner");
-    feedbackEl.style.display = "block";
+    if (feedbackEl) {
+      feedbackEl.style.display = "block";
+      let titleMsg = "";
+      if (timedOut && !state.p1.answered) {
+        titleMsg = "⏰ Waktu Habis! (+0 Poin)";
+        feedbackEl.className = "match-feedback-banner wrong";
+      } else if (state.p1.correct) {
+        titleMsg = `✅ Jawaban Benar! +${p1Base} Poin ${p1Fast > 0 ? "⚡ +50 Bonus Tercepat!" : ""}`;
+        feedbackEl.className = "match-feedback-banner correct";
+      } else {
+        titleMsg = "❌ Jawaban Kurang Tepat (+0 Poin)";
+        feedbackEl.className = "match-feedback-banner wrong";
+      }
 
-    let titleMsg = "";
-    if (timedOut && !state.p1.answered) {
-      titleMsg = "⏰ Waktu Habis! (+0 Poin)";
-      feedbackEl.className = "match-feedback-banner wrong";
-    } else if (state.p1.correct) {
-      titleMsg = `✅ Jawaban Benar! +${p1Base} Poin ${p1Fast > 0 ? "⚡ +50 Bonus Tercepat!" : ""}`;
-      feedbackEl.className = "match-feedback-banner correct";
-    } else {
-      titleMsg = "❌ Jawaban Kurang Tepat (+0 Poin)";
-      feedbackEl.className = "match-feedback-banner wrong";
+      feedbackEl.innerHTML = `
+        <strong>${titleMsg}</strong>
+        <div class="explain-line">💡 Pembahasan: ${qObj.explain || (qObj.options && qObj.options[qObj.a]) || ""}</div>
+      `;
     }
-
-    feedbackEl.innerHTML = `
-      <strong>${titleMsg}</strong>
-      <div class="explain-line">💡 Pembahasan: ${qObj.explain || qObj.options[qObj.a]}</div>
-    `;
 
     setTimeout(() => {
       if (state.active) nextRound();
@@ -445,16 +454,11 @@ window.MiniGameEngine = (function () {
     clearTimers();
     state.active = false;
 
-    // GDD Section 9.2: Perfect Round Bonus (+100 if all 5 rounds correct)
+    // Perfect Round Bonus (+100 if all 5 rounds correct)
     let p1PerfectBonus = 0;
-    let p2PerfectBonus = 0;
     if (state.p1.correctCount === state.totalRounds) {
       p1PerfectBonus = 100;
       state.p1.score += 100;
-    }
-    if (state.p2.correctCount === state.totalRounds && state.battleMode !== "solo" && state.battleMode !== "classroom") {
-      p2PerfectBonus = 100;
-      state.p2.score += 100;
     }
 
     const isSolo = state.battleMode === "solo" || state.battleMode === "classroom";
@@ -474,39 +478,43 @@ window.MiniGameEngine = (function () {
       battleMode: state.battleMode,
       miniGameId: state.miniGameId,
       correctCount: state.p1.correctCount,
+      p1Correct: state.p1.correctCount,
       totalRounds: state.totalRounds,
       perfect: p1PerfectBonus > 0,
       goldEarned,
       expEarned,
       rpDelta,
+      score: state.p1.score,
+      p1Score: state.p1.score,
       questions: state.questions,
-      classroomActivityId: state.classroomActivityId,
-      p1Score: state.p1.score
+      classroomActivityId: state.classroomActivityId
     });
 
     window.App.playSFX(p1Won ? "victory" : "correct");
 
-    // Render Result Modal
-    const resBox = document.getElementById("match-arena-body");
-    resBox.innerHTML = `
-      <div class="match-result-card">
-        <div class="result-trophy">${p1Won ? "🏆 VICTORY!" : "💪 GOOD EFFORT!"}</div>
-        <h2>${state.p1.name}: ${state.p1.score} Poin ${!isSolo ? ` vs ${state.p2.name}: ${state.p2.score} Poin` : ""}</h2>
-        <p class="result-breakdown">
-          Jawaban Benar: <strong>${state.p1.correctCount}/${state.totalRounds}</strong>
-          ${p1PerfectBonus > 0 ? ` • 🌟 <strong>Perfect Round Bonus: +100 Poin!</strong>` : ""}
-        </p>
-        <div class="reward-pills-row">
-          <span class="reward-pill gold">🪙 +${goldEarned} Gold Coin</span>
-          <span class="reward-pill exp">⭐ +${expEarned} EXP</span>
-          ${state.battleMode === "ranked" ? `<span class="reward-pill rank">🏅 ${rpDelta >= 0 ? "+" + rpDelta : rpDelta} Rank Points</span>` : ""}
+    // Render Result Modal directly in match arena body
+    const resBox = document.getElementById("match-arena-body") || document.getElementById("match-interactive-area");
+    if (resBox) {
+      resBox.innerHTML = `
+        <div class="match-result-card">
+          <div class="result-trophy">${p1Won ? "🏆 VICTORY!" : "💪 GOOD EFFORT!"}</div>
+          <h2>${state.p1.name}: ${state.p1.score} Poin ${!isSolo ? ` vs ${state.p2.name}: ${state.p2.score} Poin` : ""}</h2>
+          <p class="result-breakdown">
+            Jawaban Benar: <strong>${state.p1.correctCount}/${state.totalRounds}</strong>
+            ${p1PerfectBonus > 0 ? ` • 🌟 <strong>Perfect Round Bonus: +100 Poin!</strong>` : ""}
+          </p>
+          <div class="reward-pills-row">
+            <span class="reward-pill gold">🪙 +${goldEarned} Gold Coin</span>
+            <span class="reward-pill exp">⭐ +${expEarned} EXP</span>
+            ${state.battleMode === "ranked" ? `<span class="reward-pill rank">🏆 ${rpDelta >= 0 ? "+" + rpDelta : rpDelta} RP</span>` : ""}
+          </div>
+          <div class="result-actions-row">
+            <button class="btn-primary" onclick="MiniGameEngine.rematch()">🔄 Main Lagi</button>
+            <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">🏠 Kembali ke Lobby</button>
+          </div>
         </div>
-        <div class="result-actions-row">
-          <button class="btn-primary" onclick="MiniGameEngine.rematch()">🔄 Main Lagi</button>
-          <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">🏠 Kembali ke Lobby</button>
-        </div>
-      </div>
-    `;
+      `;
+    }
   }
 
   function rematch() {

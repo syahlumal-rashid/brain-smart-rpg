@@ -115,7 +115,7 @@
       <div class="adventure-hud-top interactive-ui">
         <div class="adventure-status-badge">
           <span>📍 Brain Academy Campus (13 Lokasi)</span>
-          <span style="color:var(--text-muted)">• Gunakan WASD / Joystick untuk bergerak</span>
+          <span style="color:var(--text-muted)">• WASD / Joystick untuk bergerak</span>
         </div>
         <button class="btn-back-lobby" onclick="App.showScreen('screen-lobby')">🏠 Kembali ke Lobby</button>
       </div>
@@ -185,95 +185,44 @@
          SCREEN: ACTIVE MATCH / QUIZ ENGINE (5 Rounds)
          ---------------------------------------------------------------------- -->
     <section id="screen-active-match" class="app-screen">
-      <div class="match-header">
-        <div class="match-versus-row">
-          <div class="fighter-card">
-            <div class="fighter-avatar" id="match-p1-avatar">👦</div>
-            <div>
-              <div class="fighter-name" id="match-p1-name">Pemain 1</div>
-              <div class="fighter-score" id="match-p1-score">0 Pts</div>
+      <div class="content-wrapper">
+        <div class="match-top-header">
+          <div class="match-title-row">
+            <h2 id="match-mode-title">⚔️ Quick Answer Battle</h2>
+            <span id="match-round-badge" class="round-badge">Ronde 1 / 5</span>
+          </div>
+
+          <div class="match-versus-bar">
+            <div class="fighter-box p1">
+              <span class="fighter-avatar">👦</span>
+              <div>
+                <strong id="match-p1-name">Pemain 1</strong>
+                <div class="score-display"><span id="match-p1-score">0</span> Poin</div>
+              </div>
+            </div>
+
+            <div class="timer-center-box" id="match-timer-box">
+              <span id="match-timer-text">15d</span>
+              <div class="timer-track"><div id="match-timer-fill"></div></div>
+            </div>
+
+            <div class="fighter-box p2">
+              <div>
+                <strong id="match-p2-name">Bot Cerdas</strong>
+                <div class="score-display"><span id="match-p2-score">0</span> Poin</div>
+              </div>
+              <span class="fighter-avatar">🤖</span>
             </div>
           </div>
 
-          <div class="match-center-info">
-            <span class="round-indicator" id="match-round-text">Ronde 1 / 5</span>
-            <div class="timer-pill" id="match-timer-box">15s</div>
-          </div>
-
-          <div class="fighter-card">
-            <div>
-              <div class="fighter-name" id="match-p2-name" style="text-align:right">Bot Cerdas</div>
-              <div class="fighter-score" id="match-p2-score" style="text-align:right">0 Pts</div>
-            </div>
-            <div class="fighter-avatar" id="match-p2-avatar">🤖</div>
-          </div>
+          <div id="match-special-visual"></div>
         </div>
 
-        <!-- Boss HP Section (Shown in Boss Mode) -->
-        <div id="boss-hud-section" class="boss-hp-section" style="display:none">
-          <div class="boss-hp-label">
-            <span>👹 Titan Pengetahuan</span>
-            <span id="boss-hp-text">100 / 100 HP</span>
-          </div>
-          <div class="boss-hp-track">
-            <div id="boss-hp-bar" class="boss-hp-bar"></div>
-          </div>
-        </div>
-      </div>
+        <div id="match-feedback-banner" class="match-feedback-banner" style="display:none"></div>
+        <div id="match-arena-body"></div>
 
-      <!-- Question Card -->
-      <div class="question-card" id="match-question-card">
-        <div class="question-meta-tags">
-          <span class="meta-tag" id="match-subject-tag">MATEMATIKA</span>
-          <span class="meta-tag" id="match-level-tag">SD KELAS 5</span>
-          <span class="meta-tag" style="background:#f59e0b22;color:#f59e0b">+100 Pts (+50 Speed)</span>
-        </div>
-        <div class="question-text" id="match-question-text">
-          Berapakah hasil dari 25 × 4 + 50?
-        </div>
-      </div>
-
-      <!-- Answers Area (Replaced dynamically for 4-choices, Word Scramble, or Local 2P) -->
-      <div id="match-interactive-area">
-        <div class="answers-grid" id="match-choices-grid">
-          <!-- Populated by minigames.js -->
-        </div>
-      </div>
-
-      <div style="text-align:center; margin-top:20px;">
-        <button class="btn-secondary" onclick="MiniGameEngine.quitMatch()">Menyerah / Keluar</button>
-      </div>
-    </section>
-
-    <!-- ----------------------------------------------------------------------
-         SCREEN: MATCH RESULT
-         ---------------------------------------------------------------------- -->
-    <section id="screen-match-result" class="app-screen">
-      <div class="result-card">
-        <h2 class="result-banner victory" id="res-banner">VICTORY! 🎉</h2>
-        <p class="result-summary-text" id="res-summary">Kamu memenangkan pertandingan dengan skor spektakuler!</p>
-
-        <div class="result-rewards-grid">
-          <div class="reward-box">
-            <div class="r-icon">⚡</div>
-            <div class="r-val" id="res-exp-val">+250</div>
-            <div class="r-lbl">EXP Karakter</div>
-          </div>
-          <div class="reward-box">
-            <div class="r-icon">🪙</div>
-            <div class="r-val" id="res-coins-val">+180</div>
-            <div class="r-lbl">Koin Emas</div>
-          </div>
-          <div class="reward-box">
-            <div class="r-icon">🏆</div>
-            <div class="r-val" id="res-rp-val">+25 RP</div>
-            <div class="r-lbl">Peringkat Rank</div>
-          </div>
-        </div>
-
-        <div class="result-actions">
-          <button class="btn-primary" onclick="MiniGameEngine.rematch()">Tanding Ulang ↺</button>
-          <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">Kembali ke Lobby 🏠</button>
+        <div style="text-align:center; margin-top:20px;">
+          <button class="btn-secondary" onclick="MiniGameEngine.quitMatch()">Menyerah / Keluar</button>
         </div>
       </div>
     </section>
@@ -291,12 +240,7 @@
           <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">← Lobby</button>
         </div>
 
-        <div class="classroom-tabs">
-          <button class="tab-btn active" id="tab-classroom-student" onclick="ClassroomSystem.setRoleView('student')">👨‍🎓 Mode Murid</button>
-          <button class="tab-btn" id="tab-classroom-teacher" onclick="ClassroomSystem.setRoleView('teacher')">👨‍🏫 Dashboard Guru</button>
-        </div>
-
-        <div id="classroom-main-container">
+        <div id="classroom-dynamic-content">
           <!-- Rendered dynamically by classroom.js -->
         </div>
       </div>
@@ -310,7 +254,7 @@
         <div class="section-header">
           <div>
             <h2 class="section-title">🛍️ Toko Akademi & Kostum Stylized</h2>
-            <p class="section-desc">Kosmetik murni tanpa Pay-to-Win: Seragam, Gaya Rambut, Aksesori, Tas, Pet Companion & Emote.</p>
+            <p class="section-desc">Kosmetik murni tanpa Pay-to-Win: Seragam, Gaya Rambut, Aksesori, Pet Companion & Emote.</p>
           </div>
           <div style="display:flex; gap:10px;">
             <button class="btn-secondary" onclick="App.showScreen('screen-inventory')">🎒 Lemari Saya</button>
@@ -327,13 +271,12 @@
         <!-- Category Filters -->
         <div class="shop-tabs-row">
           <button class="shop-tab-btn active" data-cat="all" onclick="App.setShopCategory('all')">Semua Item</button>
-          <button class="shop-tab-btn" data-cat="uniform" onclick="App.setShopCategory('uniform')">Seragam</button>
-          <button class="shop-tab-btn" data-cat="hair" onclick="App.setShopCategory('hair')">Gaya Rambut</button>
-          <button class="shop-tab-btn" data-cat="hat" onclick="App.setShopCategory('hat')">Topi & Aksesori</button>
-          <button class="shop-tab-btn" data-cat="bag" onclick="App.setShopCategory('bag')">Tas Sekolah</button>
+          <button class="shop-tab-btn" data-cat="skin" onclick="App.setShopCategory('skin')">Kostum & Seragam</button>
           <button class="shop-tab-btn" data-cat="pet" onclick="App.setShopCategory('pet')">Pet Companion</button>
+          <button class="shop-tab-btn" data-cat="frame" onclick="App.setShopCategory('frame')">Bingkai Avatar</button>
           <button class="shop-tab-btn" data-cat="emote" onclick="App.setShopCategory('emote')">Emote 3D</button>
-          <button class="shop-tab-btn" data-cat="title" onclick="App.setShopCategory('title')">Gelar Kehormatan</button>
+          <button class="shop-tab-btn" data-cat="title" onclick="App.setShopCategory('title')">Gelar</button>
+          <button class="shop-tab-btn" data-cat="background" onclick="App.setShopCategory('background')">Latar Profil</button>
         </div>
 
         <div class="card-grid" id="shop-items-grid">
@@ -372,17 +315,17 @@
         <div class="section-header">
           <div>
             <h2 class="section-title">🎯 Misi Harian & Quest Akademi</h2>
-            <p class="section-desc">Selesaikan tantangan belajar harian untuk klaim koin dan diamond gratis!</p>
+            <p class="section-desc">Selesaikan tantangan belajar harian untuk klaim koin dan EXP gratis!</p>
           </div>
           <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">← Lobby</button>
         </div>
 
-        <h3 style="margin-bottom:12px; color:var(--accent-gold);">Misi Harian (Reset Tiap Hari)</h3>
+        <h3 style="margin-bottom:12px; color:var(--accent-gold);">Misi Harian (Daily Quests)</h3>
         <div id="daily-quests-list">
           <!-- Rendered dynamically by app.js -->
         </div>
 
-        <h3 style="margin:24px 0 12px 0; color:var(--primary-light);">Pencapaian Petualangan (Story Quests)</h3>
+        <h3 style="margin:24px 0 12px 0; color:var(--primary-light);">Misi Mingguan & Pencapaian (Weekly Quests)</h3>
         <div id="story-quests-list">
           <!-- Rendered dynamically by app.js -->
         </div>

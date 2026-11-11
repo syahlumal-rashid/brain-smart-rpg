@@ -21,8 +21,18 @@ window.World3D = (function () {
   const buildingMarkers = [];
 
   function init(canvasContainerId) {
-    const container = document.getElementById(canvasContainerId);
-    if (!container || typeof THREE === "undefined") return;
+    const el = document.getElementById(canvasContainerId);
+    if (!el || typeof THREE === "undefined") return;
+
+    let targetCanvas;
+    if (el.tagName && el.tagName.toLowerCase() === "canvas") {
+      targetCanvas = el;
+    } else {
+      el.innerHTML = "";
+      targetCanvas = document.createElement("canvas");
+      targetCanvas.id = "threejs-canvas";
+      el.appendChild(targetCanvas);
+    }
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x7dd3fc);
@@ -35,13 +45,15 @@ window.World3D = (function () {
       250
     );
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer = new THREE.WebGLRenderer({
+      canvas: targetCanvas,
+      antialias: true,
+      powerPreference: "high-performance"
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.innerHTML = "";
-    container.appendChild(renderer.domElement);
 
     clock = new THREE.Clock();
 
@@ -253,7 +265,7 @@ window.World3D = (function () {
     adventureGroup.add(plaza);
 
     // Build all 13 World Locations from GDD Section 2.1
-    const locs = window.GAME_DATA.worldLocations;
+    const locs = window.GAME_DATA.worldLocations || [];
     locs.forEach((loc) => {
       const bGroup = new THREE.Group();
       bGroup.position.set(loc.x, 0, loc.z);
@@ -276,7 +288,7 @@ window.World3D = (function () {
       // Colored Roof
       const roof = new THREE.Mesh(
         new THREE.ConeGeometry(w * 0.78, 2.4, 4),
-        new THREE.MeshToonMaterial({ color: loc.color })
+        new THREE.MeshToonMaterial({ color: loc.color || 0x3b82f6 })
       );
       roof.position.y = h + 1.1;
       roof.rotation.y = Math.PI / 4;
@@ -285,13 +297,13 @@ window.World3D = (function () {
       // Door
       const door = new THREE.Mesh(
         new THREE.BoxGeometry(1.5, 2.3, 0.2),
-        new THREE.MeshToonMaterial({ color: loc.color })
+        new THREE.MeshToonMaterial({ color: loc.color || 0x2563eb })
       );
       door.position.set(0, 1.15, d / 2 + 0.05);
       bGroup.add(door);
 
       // NPC standing in front of location
-      const npc = createStylizedNPC(loc.color);
+      const npc = createStylizedNPC(loc.color || 0x2563eb);
       npc.position.set(0, 0, d / 2 + 2.1);
       bGroup.add(npc);
       npcMeshes.push(npc);
@@ -351,44 +363,61 @@ window.World3D = (function () {
   }
 
   // Apply Player Customization to 3D Mesh
-  function updateCharacterAppearance(profile) {
-    if (!playerGroup || !profile) return;
+  function updateCharacterAppearance(profileData) {
+    if (!playerGroup || !profileData) return;
+
+    const profile = profileData.equipped ? profileData : { equipped: profileData };
+    const eq = profile.equipped || {};
 
     // Hair color
-    if (hairMesh && profile.hairColor) {
-      hairMesh.material.color.set(profile.hairColor);
+    if (hairMesh) {
+      if (profile.hairColor) {
+        hairMesh.material.color.set(profile.hairColor);
+      }
     }
 
     // Uniform / Skin color
     let uniformHex = 0x3b82f6;
-    const eqSkin = window.GAME_DATA.shopItems.find((i) => i.id === profile.equippedSkin);
-    if (eqSkin && eqSkin.id !== "skin_default" && eqSkin.color) {
+    const skinId = eq.skin || eq.uniform || profile.equippedSkin;
+    const eqSkin = window.GAME_DATA.shopItems.find((i) => i.id === skinId);
+    if (eqSkin && eqSkin.color) {
       uniformHex = eqSkin.color;
     } else {
-      const edu = window.GAME_DATA.educationLevels.find((e) => e.id === profile.educationLevel);
+      const eduId = profile.educationLevel || "sd";
+      const edu = window.GAME_DATA.educationLevels.find((e) => e.id === eduId);
       if (edu && edu.uniformColor) uniformHex = edu.uniformColor;
     }
-    bodyMesh.material.color.setHex(uniformHex);
-    leftArm.material.color.setHex(uniformHex);
-    rightArm.material.color.setHex(uniformHex);
+    if (bodyMesh) bodyMesh.material.color.setHex(uniformHex);
+    if (leftArm) leftArm.material.color.setHex(uniformHex);
+    if (rightArm) rightArm.material.color.setHex(uniformHex);
 
-    // Bag color
-    if (bagMesh && profile.bagColor) {
-      bagMesh.material.color.set(profile.bagColor);
-      bagMesh.visible = profile.showBag !== false;
+    // Bag color & visibility
+    if (bagMesh) {
+      const bagId = eq.bag || profile.equippedBag;
+      const bagItem = window.GAME_DATA.shopItems.find((i) => i.id === bagId);
+      if (bagItem && bagItem.color) {
+        bagMesh.material.color.setHex(bagItem.color);
+        bagMesh.visible = true;
+      } else {
+        bagMesh.visible = bagId !== "none" && bagId !== "bag_none";
+      }
     }
 
     // Hat / Accessory
     if (hatMesh) {
-      hatMesh.visible = !!profile.showHat;
+      const hatId = eq.hat || profile.equippedHat;
+      hatMesh.visible = !!(hatId && hatId !== "none" && hatId !== "hat_none");
     }
 
     // Pet Companion
     if (petMesh) {
-      const petItem = window.GAME_DATA.shopItems.find((i) => i.id === profile.equippedPet);
-      if (petItem && petItem.id !== "pet_none") {
+      const petId = eq.pet || profile.equippedPet;
+      const petItem = window.GAME_DATA.shopItems.find((i) => i.id === petId);
+      if (petItem && petItem.id !== "pet_none" && petItem.color) {
         petMesh.visible = true;
-        petMesh.children[0].material.color.setHex(petItem.color || 0xa855f7);
+        if (petMesh.children && petMesh.children[0]) {
+          petMesh.children[0].material.color.setHex(petItem.color);
+        }
       } else {
         petMesh.visible = false;
       }
@@ -479,13 +508,13 @@ window.World3D = (function () {
       // Gentle idle rotation or emote animation
       if (emoteTimer > 0) {
         emoteTimer -= dt;
-        rightArm.rotation.z = 2.4 + Math.sin(elapsed * 14) * 0.4;
+        if (rightArm) rightArm.rotation.z = 2.4 + Math.sin(elapsed * 14) * 0.4;
         playerGroup.position.y = Math.abs(Math.sin(elapsed * 8)) * 0.35;
         playerGroup.rotation.y += dt * 4;
       } else {
-        rightArm.rotation.z = 0;
-        leftArm.rotation.x = Math.sin(elapsed * 2) * 0.06;
-        rightArm.rotation.x = -Math.sin(elapsed * 2) * 0.06;
+        if (rightArm) rightArm.rotation.z = 0;
+        if (leftArm) leftArm.rotation.x = Math.sin(elapsed * 2) * 0.06;
+        if (rightArm) rightArm.rotation.x = -Math.sin(elapsed * 2) * 0.06;
         playerGroup.position.y = 0;
         playerGroup.rotation.y = Math.sin(elapsed * 0.65) * 0.35;
       }
@@ -524,15 +553,15 @@ window.World3D = (function () {
 
         // Walk/Run leg & arm swing animation
         const swingSpeed = (keys.shift || isRunning) ? 14 : 9;
-        leftLeg.rotation.x = Math.sin(elapsed * swingSpeed) * 0.65;
-        rightLeg.rotation.x = -Math.sin(elapsed * swingSpeed) * 0.65;
-        leftArm.rotation.x = -Math.sin(elapsed * swingSpeed) * 0.55;
-        rightArm.rotation.x = Math.sin(elapsed * swingSpeed) * 0.55;
+        if (leftLeg) leftLeg.rotation.x = Math.sin(elapsed * swingSpeed) * 0.65;
+        if (rightLeg) rightLeg.rotation.x = -Math.sin(elapsed * swingSpeed) * 0.65;
+        if (leftArm) leftArm.rotation.x = -Math.sin(elapsed * swingSpeed) * 0.55;
+        if (rightArm) rightArm.rotation.x = Math.sin(elapsed * swingSpeed) * 0.55;
       } else {
-        leftLeg.rotation.x = 0;
-        rightLeg.rotation.x = 0;
-        leftArm.rotation.x = 0;
-        rightArm.rotation.x = 0;
+        if (leftLeg) leftLeg.rotation.x = 0;
+        if (rightLeg) rightLeg.rotation.x = 0;
+        if (leftArm) leftArm.rotation.x = 0;
+        if (rightArm) rightArm.rotation.x = 0;
       }
 
       // Smooth 3rd-Person Follow Camera
@@ -546,7 +575,8 @@ window.World3D = (function () {
       // Proximity check to 13 World Locations
       let closest = null;
       let minDist = 7.5;
-      window.GAME_DATA.worldLocations.forEach((loc) => {
+      const worldLocs = window.GAME_DATA.worldLocations || [];
+      worldLocs.forEach((loc) => {
         const d = Math.hypot(playerGroup.position.x - loc.x, playerGroup.position.z - (loc.z + 3.5));
         if (d < minDist) {
           minDist = d;

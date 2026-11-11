@@ -195,7 +195,7 @@ window.ClassroomSystem = (function () {
   }
 
   function renderClassroomScreen() {
-    const container = document.getElementById("classroom-dynamic-content");
+    const container = document.getElementById("classroom-dynamic-content") || document.getElementById("classroom-main-container");
     if (!container) return;
 
     const cls = getActiveClass();
