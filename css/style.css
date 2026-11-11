@@ -42,7 +42,7 @@ body {
 }
 
 /* ==========================================================================
-   3D CANVAS WRAPPER (Three.js)
+   3D CANVAS WRAPPER (Three.js WebGL)
    ========================================================================== */
 #canvas-wrapper {
   position: fixed;
@@ -74,22 +74,13 @@ body {
 .app-screen {
   display: none;
   width: 100%;
-  min-height: calc(100vh - 70px);
-  padding: 20px;
+  min-height: calc(100vh - 65px);
+  padding: 16px;
+  position: relative;
 }
 
 .app-screen.active {
   display: block;
-}
-
-#screen-lobby.active,
-#screen-adventure.active {
-  pointer-events: none;
-}
-
-#screen-lobby.active .interactive-ui,
-#screen-adventure.active .interactive-ui {
-  pointer-events: auto;
 }
 
 /* ==========================================================================
@@ -130,9 +121,9 @@ body {
 }
 
 .hud-avatar {
-  font-size: 26px;
-  width: 40px;
-  height: 40px;
+  font-size: 24px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -264,25 +255,25 @@ body {
 }
 
 /* ==========================================================================
-   LOBBY SCREEN
+   LOBBY SCREEN (NATURAL & RELIABLE FLOW)
    ========================================================================== */
 #screen-lobby {
-  position: relative;
-  min-height: calc(100vh - 70px);
+  padding: 0;
+  pointer-events: auto;
 }
 
 .lobby-overlay-ui {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  min-height: calc(100vh - 65px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 20px 28px;
-  pointer-events: none;
+  padding: 20px 24px;
+  pointer-events: auto;
+  z-index: 10;
 }
 
 .lobby-header-banner {
-  pointer-events: auto;
   align-self: flex-start;
   background: var(--bg-panel);
   padding: 12px 20px;
@@ -307,12 +298,12 @@ body {
 }
 
 .lobby-quick-actions {
-  pointer-events: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-top: auto;
+  padding: 14px 0 20px 0;
 }
 
 .lobby-btn {
@@ -336,6 +327,11 @@ body {
 
 .lobby-btn .btn-icon {
   font-size: 24px;
+  pointer-events: none;
+}
+
+.lobby-btn span {
+  pointer-events: none;
 }
 
 .lobby-btn:hover {
@@ -354,12 +350,11 @@ body {
    ADVENTURE SCREEN & 3D CONTROLS
    ========================================================================== */
 #screen-adventure {
-  position: relative;
-  min-height: calc(100vh - 70px);
+  padding: 0;
+  pointer-events: auto;
 }
 
 .adventure-hud-top {
-  pointer-events: auto;
   position: absolute;
   top: 15px;
   left: 20px;
@@ -367,6 +362,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  z-index: 50;
+  pointer-events: auto;
 }
 
 .adventure-status-badge {
@@ -397,13 +394,13 @@ body {
 }
 
 #adventure-interact-prompt {
-  pointer-events: auto;
   position: absolute;
   bottom: 120px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
   display: none;
+  pointer-events: auto;
 }
 
 .prompt-card {
@@ -664,7 +661,7 @@ body {
 }
 
 /* ==========================================================================
-   ACTIVE QUIZ MATCH SCREEN (MINIGAMES.JS INTERFACE)
+   ACTIVE QUIZ MATCH SCREEN
    ========================================================================== */
 #screen-active-match {
   max-width: 900px;
@@ -1143,123 +1140,106 @@ body {
   outline: none;
 }
 
-.activities-list {
+/* Classroom Activity List */
+.activity-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 10px;
 }
 
-.activity-card {
-  background: rgba(0, 0, 0, 0.3);
+.activity-item-card {
+  background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--border-panel);
   border-radius: var(--radius-md);
-  padding: 12px 14px;
+  padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
 }
 
-.activity-card h4 {
-  font-size: 14px;
-  margin-bottom: 2px;
-}
-
-.activity-card p {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.btn-launch-act {
-  background: var(--accent-gold);
-  color: #000;
-  border: none;
+.mode-tag {
+  display: inline-block;
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--primary-light);
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
   font-weight: 800;
-  font-size: 12px;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  white-space: nowrap;
+  margin-bottom: 4px;
 }
 
-.btn-done-act {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-muted);
-  border: none;
-  font-size: 12px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  cursor: default;
-}
-
-.leaderboard-table {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.lb-student-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--border-panel);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  font-size: 13px;
-}
-
-.teacher-analytics-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.analytic-tile {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid var(--border-panel);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  text-align: center;
-}
-
-.analytic-tile .val {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--accent-gold);
-}
-
-.analytic-tile .lbl {
-  font-size: 12px;
+.act-meta {
+  font-size: 11px;
   color: var(--text-muted);
   margin-top: 4px;
 }
 
-.create-class-form,
-.create-act-form {
+.sub-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+/* Teacher KPI Cards */
+.teacher-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.kpi-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  text-align: center;
+}
+
+.kpi-card span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.kpi-card strong {
+  font-size: 20px;
+  color: var(--accent-gold);
+}
+
+.form-stack {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
-.form-group {
+.input-row-inline {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.form-group label {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 600;
+.divider-line {
+  border: none;
+  border-top: 1px solid var(--border-panel);
+  margin: 10px 0;
 }
 
 /* ==========================================================================
    SHOP & INVENTORY
-   ========================================================================== */
+   ========================================================================= */
 .shop-tabs-row {
   display: flex;
   gap: 8px;
@@ -1803,7 +1783,19 @@ body {
   .local2p-split-grid {
     grid-template-columns: 1fr;
   }
-  .teacher-analytics-row {
-    grid-template-columns: 1fr;
+  .teacher-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .activity-item-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .lobby-quick-actions {
+    gap: 8px;
+  }
+  .lobby-btn {
+    min-width: 110px;
+    padding: 10px;
+    font-size: 12px;
   }
 }

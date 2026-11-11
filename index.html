@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Brain Smart RPG v3.0 — Learn Together, Play Together, Grow Together!</title>
   <meta name="description" content="Game Edukasi RPG 3D: Kehidupan Sekolah, Quiz Battle Multiplayer, Mini-Game & Classroom LMS Guru-Murid.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#3b82f6">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20width=%2232%22%20height=%2232%22><text y=%2226%22 font-size=%2226%22>🎓</text></svg>">
 </head>
@@ -168,7 +170,7 @@
             <select id="select-battle-minigame" class="filter-select">
               <option value="quick_answer">Quick Answer Battle (Pilihan Ganda Cepat)</option>
               <option value="math_race">Math Race (Balap Hitung Cepat)</option>
-              <option value="memory_cards">Memory Challenge (Uji Ingatan)</option>
+              <option value="memory_challenge">Memory Challenge (Uji Ingatan)</option>
               <option value="true_false">True or False (Benar atau Salah)</option>
               <option value="word_battle">Word Battle (Susun Kata Acak)</option>
             </select>
@@ -488,8 +490,13 @@
   <!-- ========================================================================
        5. JAVASCRIPT LIBRARIES & MODULES
        ======================================================================== -->
-  <!-- Three.js (r128) WebGL 3D Engine -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Local Three.js with CDN fallback -->
+  <script src="js/three.min.js"></script>
+  <script>
+    if (typeof THREE === "undefined") {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
 
   <!-- Game Modules -->
   <script src="js/data.js"></script>
@@ -497,6 +504,15 @@
   <script src="js/minigames.js"></script>
   <script src="js/classroom.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      });
+    }
+  </script>
 
 </body>
 </html>

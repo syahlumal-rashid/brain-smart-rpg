@@ -539,7 +539,7 @@ window.App = (function () {
           <span class="prompt-icon">${loc.icon || "📍"}</span>
           <div class="prompt-info">
             <strong>${loc.name}</strong>
-            <p>${loc.description}</p>
+            <p>${loc.desc || loc.description || ""}</p>
           </div>
           <button class="btn-primary-sm" onclick="App.triggerCurrentLocationInteraction()">[E] Masuk</button>
         </div>
@@ -580,7 +580,7 @@ window.App = (function () {
     const actionBtn = document.getElementById("loc-modal-action-btn");
 
     if (titleEl) titleEl.innerHTML = `${loc.icon || "📍"} ${loc.name}`;
-    if (descEl) descEl.textContent = loc.description;
+    if (descEl) descEl.textContent = loc.desc || loc.description || "";
     if (npcEl) {
       npcEl.innerHTML = `
         <div class="npc-dialog-box">
