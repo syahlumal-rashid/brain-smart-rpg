@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Brain Smart RPG v3.0 — Learn Together, Play Together, Grow Together!</title>
+  <meta name="description" content="Game Edukasi RPG 3D: Kehidupan Sekolah, Quiz Battle Multiplayer, Mini-Game & Classroom LMS Guru-Murid.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20width=%2232%22%20height=%2232%22><text y=%2226%22 font-size=%2226%22>🎓</text></svg>">
+</head>
+<body>
+
+  <!-- ========================================================================
+       1. 3D THREE.JS CANVAS WRAPPER (WebGL World & Character Podium)
+       ======================================================================== -->
+  <div id="canvas-wrapper">
+    <canvas id="threejs-canvas"></canvas>
+  </div>
+
+  <!-- ========================================================================
+       2. TOP HEADER HUD (Persistent)
+       ======================================================================== -->
+  <header id="top-hud">
+    <div class="hud-player-profile" onclick="App.showScreen('screen-profile')" title="Buka Profil & Statistik">
+      <div class="hud-avatar" id="hud-player-avatar">👦</div>
+      <div class="hud-info">
+        <div class="hud-name-row">
+          <span id="hud-player-name">Siswa Juara</span>
+          <span class="hud-level-badge" id="hud-player-level">Lv. 1</span>
+        </div>
+        <div class="hud-exp-container">
+          <div class="hud-exp-track">
+            <div id="hud-exp-bar"></div>
+          </div>
+          <span id="hud-exp-text">0 / 200 EXP</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Currency Counters -->
+    <div class="hud-currencies">
+      <div class="hud-currency-pill" title="Koin Emas">
+        <span class="currency-icon">🪙</span>
+        <span id="hud-player-coins">500</span>
+      </div>
+      <div class="hud-currency-pill" title="Permata Diamond">
+        <span class="currency-icon">💎</span>
+        <span id="hud-player-diamonds">50</span>
+      </div>
+      <div class="hud-rank-pill" onclick="App.showScreen('screen-leaderboard')" title="Peringkat Ranked">
+        <span id="hud-rank-badge">🥉</span>
+        <span id="hud-rank-tier">Bronze I</span>
+      </div>
+    </div>
+
+    <!-- Quick Utilities -->
+    <div class="hud-actions">
+      <button class="hud-icon-btn" onclick="App.toggleBGM()" title="Musik BGM">🎵</button>
+      <button class="hud-icon-btn" onclick="App.openModal('modal-settings')" title="Pengaturan">⚙️</button>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       3. MAIN SCREENS CONTAINER
+       ======================================================================== -->
+  <main id="app-root">
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: LOBBY (3D Character Podium & Main Menu)
+         ---------------------------------------------------------------------- -->
+    <section id="screen-lobby" class="app-screen active">
+      <div class="lobby-overlay-ui">
+        <div class="lobby-header-banner interactive-ui">
+          <h1 class="lobby-title">Brain Smart RPG</h1>
+          <p class="lobby-subtitle">Versi 3.0 • Learn Together, Play Together, Grow Together!</p>
+        </div>
+
+        <div class="lobby-quick-actions interactive-ui">
+          <button class="lobby-btn btn-featured" onclick="App.showScreen('screen-adventure')">
+            <span class="btn-icon">🏫</span>
+            <span>JELAJAHI SEKOLAH 3D</span>
+          </button>
+          <button class="lobby-btn" onclick="App.showScreen('screen-battle-select')">
+            <span class="btn-icon">⚔️</span>
+            <span>QUIZ BATTLE</span>
+          </button>
+          <button class="lobby-btn" onclick="App.showScreen('screen-classroom')">
+            <span class="btn-icon">👨‍🏫</span>
+            <span>CLASSROOM & GURU</span>
+          </button>
+          <button class="lobby-btn" onclick="App.showScreen('screen-shop')">
+            <span class="btn-icon">🛍️</span>
+            <span>TOKO & KOSTUM</span>
+          </button>
+          <button class="lobby-btn" onclick="App.showScreen('screen-quests')">
+            <span class="btn-icon">🎯</span>
+            <span>MISI & QUEST</span>
+          </button>
+          <button class="lobby-btn" onclick="App.showScreen('screen-leaderboard')">
+            <span class="btn-icon">🏆</span>
+            <span>PERINGKAT</span>
+          </button>
+          <button class="lobby-btn" onclick="App.openModal('modal-emotes')">
+            <span class="btn-icon">💃</span>
+            <span>EMOTE 3D</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: 3D ADVENTURE (School World Exploration)
+         ---------------------------------------------------------------------- -->
+    <section id="screen-adventure" class="app-screen">
+      <div class="adventure-hud-top interactive-ui">
+        <div class="adventure-status-badge">
+          <span>📍 Brain Academy Campus (13 Lokasi)</span>
+          <span style="color:var(--text-muted)">• Gunakan WASD / Joystick untuk bergerak</span>
+        </div>
+        <button class="btn-back-lobby" onclick="App.showScreen('screen-lobby')">🏠 Kembali ke Lobby</button>
+      </div>
+
+      <!-- Proximity Trigger Popup -->
+      <div id="adventure-interact-prompt" class="interactive-ui">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- Mobile On-Screen Touch Controls -->
+      <div id="mobile-adventure-controls">
+        <div id="virtual-joystick-zone">
+          <div id="joystick-knob"></div>
+        </div>
+        <div class="mobile-action-buttons">
+          <button class="mobile-action-btn btn-interact" onclick="App.triggerCurrentLocationInteraction()" title="Interaksi">[E]</button>
+          <button class="mobile-action-btn btn-sprint" onclick="World3D.toggleSprint()" title="Lari Cepat">⚡</button>
+          <button class="mobile-action-btn" onclick="App.openModal('modal-emotes')" title="Emote">💃</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: BATTLE & QUIZ SELECTION
+         ---------------------------------------------------------------------- -->
+    <section id="screen-battle-select" class="app-screen">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">⚔️ Arena Quiz Battle & Mini-Games</h2>
+            <p class="section-desc">Pilih mode tantangan, asah otakmu, dan raih kemenangan 5 ronde!</p>
+          </div>
+          <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">← Lobby</button>
+        </div>
+
+        <div class="battle-filter-bar">
+          <div class="filter-group">
+            <label for="select-battle-level">Jenjang Kurikulum Soal:</label>
+            <select id="select-battle-level" class="filter-select">
+              <option value="all">Semua Jenjang (Campuran)</option>
+              <option value="sd">Elementary School (SD 1–6)</option>
+              <option value="smp">Junior High School (SMP 7–9)</option>
+              <option value="sma">Senior High School (SMA 10–12)</option>
+              <option value="smk">Vocational High School (SMK)</option>
+              <option value="univ">University (Perguruan Tinggi)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="select-battle-minigame">Tipe Mini-Game:</label>
+            <select id="select-battle-minigame" class="filter-select">
+              <option value="quick_answer">Quick Answer Battle (Pilihan Ganda Cepat)</option>
+              <option value="math_race">Math Race (Balap Hitung Cepat)</option>
+              <option value="memory_cards">Memory Challenge (Uji Ingatan)</option>
+              <option value="true_false">True or False (Benar atau Salah)</option>
+              <option value="word_battle">Word Battle (Susun Kata Acak)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="battle-modes-list">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: ACTIVE MATCH / QUIZ ENGINE (5 Rounds)
+         ---------------------------------------------------------------------- -->
+    <section id="screen-active-match" class="app-screen">
+      <div class="match-header">
+        <div class="match-versus-row">
+          <div class="fighter-card">
+            <div class="fighter-avatar" id="match-p1-avatar">👦</div>
+            <div>
+              <div class="fighter-name" id="match-p1-name">Pemain 1</div>
+              <div class="fighter-score" id="match-p1-score">0 Pts</div>
+            </div>
+          </div>
+
+          <div class="match-center-info">
+            <span class="round-indicator" id="match-round-text">Ronde 1 / 5</span>
+            <div class="timer-pill" id="match-timer-box">15s</div>
+          </div>
+
+          <div class="fighter-card">
+            <div>
+              <div class="fighter-name" id="match-p2-name" style="text-align:right">Bot Cerdas</div>
+              <div class="fighter-score" id="match-p2-score" style="text-align:right">0 Pts</div>
+            </div>
+            <div class="fighter-avatar" id="match-p2-avatar">🤖</div>
+          </div>
+        </div>
+
+        <!-- Boss HP Section (Shown in Boss Mode) -->
+        <div id="boss-hud-section" class="boss-hp-section" style="display:none">
+          <div class="boss-hp-label">
+            <span>👹 Titan Pengetahuan</span>
+            <span id="boss-hp-text">100 / 100 HP</span>
+          </div>
+          <div class="boss-hp-track">
+            <div id="boss-hp-bar" class="boss-hp-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Question Card -->
+      <div class="question-card" id="match-question-card">
+        <div class="question-meta-tags">
+          <span class="meta-tag" id="match-subject-tag">MATEMATIKA</span>
+          <span class="meta-tag" id="match-level-tag">SD KELAS 5</span>
+          <span class="meta-tag" style="background:#f59e0b22;color:#f59e0b">+100 Pts (+50 Speed)</span>
+        </div>
+        <div class="question-text" id="match-question-text">
+          Berapakah hasil dari 25 × 4 + 50?
+        </div>
+      </div>
+
+      <!-- Answers Area (Replaced dynamically for 4-choices, Word Scramble, or Local 2P) -->
+      <div id="match-interactive-area">
+        <div class="answers-grid" id="match-choices-grid">
+          <!-- Populated by minigames.js -->
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:20px;">
+        <button class="btn-secondary" onclick="MiniGameEngine.quitMatch()">Menyerah / Keluar</button>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: MATCH RESULT
+         ---------------------------------------------------------------------- -->
+    <section id="screen-match-result" class="app-screen">
+      <div class="result-card">
+        <h2 class="result-banner victory" id="res-banner">VICTORY! 🎉</h2>
+        <p class="result-summary-text" id="res-summary">Kamu memenangkan pertandingan dengan skor spektakuler!</p>
+
+        <div class="result-rewards-grid">
+          <div class="reward-box">
+            <div class="r-icon">⚡</div>
+            <div class="r-val" id="res-exp-val">+250</div>
+            <div class="r-lbl">EXP Karakter</div>
+          </div>
+          <div class="reward-box">
+            <div class="r-icon">🪙</div>
+            <div class="r-val" id="res-coins-val">+180</div>
+            <div class="r-lbl">Koin Emas</div>
+          </div>
+          <div class="reward-box">
+            <div class="r-icon">🏆</div>
+            <div class="r-val" id="res-rp-val">+25 RP</div>
+            <div class="r-lbl">Peringkat Rank</div>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button class="btn-primary" onclick="MiniGameEngine.rematch()">Tanding Ulang ↺</button>
+          <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">Kembali ke Lobby 🏠</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: CLASSROOM SYSTEM & TEACHER DASHBOARD
+         ---------------------------------------------------------------------- -->
+    <section id="screen-classroom" class="app-screen">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">👨‍🏫 Classroom Hub & Learning Management</h2>
+            <p class="section-desc">Mode Kelas Virtual untuk Guru & Murid: Tugas, Live Quiz, Ujian, dan Analisis Nilai.</p>
+          </div>
+          <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">← Lobby</button>
+        </div>
+
+        <div class="classroom-tabs">
+          <button class="tab-btn active" id="tab-classroom-student" onclick="ClassroomSystem.setRoleView('student')">👨‍🎓 Mode Murid</button>
+          <button class="tab-btn" id="tab-classroom-teacher" onclick="ClassroomSystem.setRoleView('teacher')">👨‍🏫 Dashboard Guru</button>
+        </div>
+
+        <div id="classroom-main-container">
+          <!-- Rendered dynamically by classroom.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: SHOP & WARDROBE
+         ---------------------------------------------------------------------- -->
+    <section id="screen-shop" class="app-screen">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🛍️ Toko Akademi & Kostum Stylized</h2>
+            <p class="section-desc">Kosmetik murni tanpa Pay-to-Win: Seragam, Gaya Rambut, Aksesori, Tas, Pet Companion & Emote.</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-secondary" onclick="App.showScreen('screen-inventory')">🎒 Lemari Saya</button>
+            <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">← Lobby</button>
+          </div>
+        </div>
+
+        <!-- Shop Balances -->
+        <div style="display:flex; gap:16px; margin-bottom:16px;">
+          <div class="hud-currency-pill"><span>🪙 Koin:</span> <strong id="shop-coins-display">0</strong></div>
+          <div class="hud-currency-pill"><span>💎 Diamond:</span> <strong id="shop-diamonds-display">0</strong></div>
+        </div>
+
+        <!-- Category Filters -->
+        <div class="shop-tabs-row">
+          <button class="shop-tab-btn active" data-cat="all" onclick="App.setShopCategory('all')">Semua Item</button>
+          <button class="shop-tab-btn" data-cat="uniform" onclick="App.setShopCategory('uniform')">Seragam</button>
+          <button class="shop-tab-btn" data-cat="hair" onclick="App.setShopCategory('hair')">Gaya Rambut</button>
+          <button class="shop-tab-btn" data-cat="hat" onclick="App.setShopCategory('hat')">Topi & Aksesori</button>
+          <button class="shop-tab-btn" data-cat="bag" onclick="App.setShopCategory('bag')">Tas Sekolah</button>
+          <button class="shop-tab-btn" data-cat="pet" onclick="App.setShopCategory('pet')">Pet Companion</button>
+          <button class="shop-tab-btn" data-cat="emote" onclick="App.setShopCategory('emote')">Emote 3D</button>
+          <button class="shop-tab-btn" data-cat="title" onclick="App.setShopCategory('title')">Gelar Kehormatan</button>
+        </div>
+
+        <div class="card-grid" id="shop-items-grid">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: INVENTORY / WARDROBE
+         ---------------------------------------------------------------------- -->
+    <section id="screen-inventory" class="app-screen">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🎒 Lemari Pakaian & Inventori</h2>
+            <p class="section-desc">Koleksi item kosmetik yang sudah kamu miliki. Klik pasang untuk mengubah penampilan 3D.</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-secondary" onclick="App.showScreen('screen-shop')">🛍️ Toko</button>
+            <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">← Lobby</button>
+          </div>
+        </div>
+
+        <div class="card-grid" id="inventory-items-grid">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: QUESTS & MISSIONS
+         ---------------------------------------------------------------------- -->
+    <section id="screen-quests" class="app-screen">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🎯 Misi Harian & Quest Akademi</h2>
+            <p class="section-desc">Selesaikan tantangan belajar harian untuk klaim koin dan diamond gratis!</p>
+          </div>
+          <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">← Lobby</button>
+        </div>
+
+        <h3 style="margin-bottom:12px; color:var(--accent-gold);">Misi Harian (Reset Tiap Hari)</h3>
+        <div id="daily-quests-list">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+
+        <h3 style="margin:24px 0 12px 0; color:var(--primary-light);">Pencapaian Petualangan (Story Quests)</h3>
+        <div id="story-quests-list">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: LEADERBOARD
+         ---------------------------------------------------------------------- -->
+    <section id="screen-leaderboard" class="app-screen">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">🏆 Peringkat Juara Nasional (Leaderboard)</h2>
+            <p class="section-desc">Pemain terbaik berdasarkan Ranked Points (RP) dari seluruh sekolah di Indonesia.</p>
+          </div>
+          <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">← Lobby</button>
+        </div>
+
+        <div id="leaderboard-list">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------------
+         SCREEN: PROFILE & BADGES
+         ---------------------------------------------------------------------- -->
+    <section id="screen-profile" class="app-screen">
+      <div class="content-wrapper">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">👤 Profil Siswa & Prestasi Lencana</h2>
+            <p class="section-desc">Informasi statistik bermain, win rate, jenjang pendidikan aktif, dan pencapaian lencana.</p>
+          </div>
+          <button class="btn-secondary" onclick="App.showScreen('screen-lobby')">← Lobby</button>
+        </div>
+
+        <div class="profile-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <h3 style="font-size:22px; display:flex; align-items:center; gap:8px;">
+                <span id="prof-name-val">Siswa Juara</span>
+                <button class="btn-primary-xs" onclick="App.editPlayerName()">✏️ Ubah Nama</button>
+              </h3>
+              <p style="color:var(--text-muted); font-size:13px;" id="prof-level-val">Level 1 (Kelas 5)</p>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:12px; color:var(--text-muted); display:block;">Pangkat Kompetitif</span>
+              <strong style="color:var(--accent-gold); font-size:18px;" id="prof-rank-val">Bronze I (120 RP)</strong>
+            </div>
+          </div>
+
+          <div class="profile-stats-grid">
+            <div class="stat-box">
+              <div class="stat-val" id="prof-matches-val">0</div>
+              <div class="stat-lbl">Pertandingan</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-val" id="prof-winrate-val">0%</div>
+              <div class="stat-lbl">Rasio Menang</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-val" id="prof-streak-val">0</div>
+              <div class="stat-lbl">Win Streak</div>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="margin-bottom:14px; color:var(--accent-gold);">Koleksi Lencana Prestasi (Badges)</h3>
+        <div class="card-grid" id="prof-badges-grid">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================
+       4. MODALS & POPUPS
+       ======================================================================== -->
+
+  <!-- Modal: Location Interaction (3D World Buildings & NPCs) -->
+  <div id="modal-location-interact" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="loc-modal-title">Gedung Sekolah</h3>
+        <button class="modal-close-btn" onclick="App.closeModal('modal-location-interact')">✕</button>
+      </div>
+      <p id="loc-modal-desc" style="color:var(--text-muted); font-size:14px;"></p>
+      <div id="loc-modal-npc"></div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="btn-secondary" onclick="App.closeModal('modal-location-interact')">Nanti Saja</button>
+        <button class="btn-primary" id="loc-modal-action-btn">Masuk</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Settings & Audio -->
+  <div id="modal-settings" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Pengaturan Game</h3>
+        <button class="modal-close-btn" onclick="App.closeModal('modal-settings')">✕</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px; margin:16px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Musik Latar (BGM Synthesizer):</span>
+          <button class="btn-secondary" id="setting-bgm-toggle" onclick="App.toggleBGM()">ON 🎵</button>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Efek Suara (SFX):</span>
+          <button class="btn-secondary" id="setting-sfx-toggle" onclick="App.toggleSFX()">ON 🔊</button>
+        </div>
+        <div style="border-top:1px solid var(--border-panel); padding-top:14px;">
+          <small style="color:var(--text-muted); display:block; margin-bottom:8px;">Pilihan Jenjang Pendidikan:</small>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn-primary-xs" onclick="App.setPlayerEducationLevel('sd')">SD</button>
+            <button class="btn-primary-xs" onclick="App.setPlayerEducationLevel('smp')">SMP</button>
+            <button class="btn-primary-xs" onclick="App.setPlayerEducationLevel('sma')">SMA</button>
+            <button class="btn-primary-xs" onclick="App.setPlayerEducationLevel('smk')">SMK</button>
+            <button class="btn-primary-xs" onclick="App.setPlayerEducationLevel('univ')">Universitas</button>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <button class="btn-primary" onclick="App.closeModal('modal-settings')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Emotes 3D -->
+  <div id="modal-emotes" class="modal-overlay">
+    <div class="modal-box" style="max-width:380px;">
+      <div class="modal-header">
+        <h3 class="modal-title">💃 Pilih Emote 3D</h3>
+        <button class="modal-close-btn" onclick="App.closeModal('modal-emotes')">✕</button>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0;">
+        <button class="btn-secondary" onclick="World3D.triggerEmote('wave'); App.closeModal('modal-emotes');">👋 Melambai</button>
+        <button class="btn-secondary" onclick="World3D.triggerEmote('cheer'); App.closeModal('modal-emotes');">🎉 Bersorak</button>
+        <button class="btn-secondary" onclick="World3D.triggerEmote('dance'); App.closeModal('modal-emotes');">🕺 Menari</button>
+        <button class="btn-secondary" onclick="World3D.triggerEmote('jump'); App.closeModal('modal-emotes');">⬆️ Lompat Senang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Level Up Celebration -->
+  <div id="modal-levelup" class="modal-overlay">
+    <div class="modal-box" style="text-align:center;">
+      <h2 style="font-size:32px; color:var(--accent-gold); margin-bottom:10px;">🌟 LEVEL UP! 🌟</h2>
+      <p id="levelup-desc" style="font-size:15px; margin-bottom:20px;"></p>
+      <button class="btn-primary" onclick="App.closeModal('modal-levelup')">HEBAT! TERIMA KASIH</button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- ========================================================================
+       5. JAVASCRIPT LIBRARIES & MODULES
+       ======================================================================== -->
+  <!-- Three.js (r128) WebGL 3D Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Game Modules -->
+  <script src="js/data.js"></script>
+  <script src="js/world3d.js"></script>
+  <script src="js/minigames.js"></script>
+  <script src="js/classroom.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
